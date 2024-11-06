@@ -88,7 +88,7 @@ sed -i "s/\${GCP_PROJECT_ID}/$PROJECT_NAME/g" "$SCRIPT_DIR/main.tf"
 ssh -o StrictHostKeyChecking=no -o BatchMode=yes -i ~/.ssh/test_cluster_key "$USER"@"$CONTROL_NODE_PUBLIC_IP" "true"
 REMOTE_CONTROL_PUBKEY=$(ssh -o BatchMode=yes -i ~/.ssh/test_cluster_key "$USER"@"$CONTROL_NODE_PUBLIC_IP" "ssh-keygen -t ecdsa -b 384 -f ~/.ssh/test_control_node_key -N '' -q && cat ~/.ssh/test_control_node_key.pub")
 echo "Got public key generated on $CONTROL_NODE_NAME: $REMOTE_CONTROL_PUBKEY"
-sed -i "s/\${CONTROL_KEY_PUB}/$REMOTE_CONTROL_PUBKEY/g" "$SCRIPT_DIR/main.tf"
+sed -i "s|\${CONTROL_KEY_PUB}|$REMOTE_CONTROL_PUBKEY|g" "$SCRIPT_DIR/main.tf"
 
 echo "Updated main.tf:"
 cat "$SCRIPT_DIR/main.tf"

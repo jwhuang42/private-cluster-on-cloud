@@ -83,17 +83,19 @@ echo "******************************************************************"
 echo "Created $CONTROL_NODE_NAME with public IP: $CONTROL_NODE_PUBLIC_IP"
 echo "******************************************************************"
 
-sed -i "s/\${GCP_PROJECT_ID}/$PROJECT_NAME/g" $(dirname "$0")/main.tf
-REMOTE_CONTROL_PUBKEY=$(ssh -o StrictHostKeyChecking=no -i ~/.ssh/test_cluster_key "$USER"@"$CONTROL_NODE_PUBLIC_IP" "ssh-keygen -t ecdsa -b 384 -f ~/.ssh/test_control_node_key -N '' -q && cat ~/.ssh/test_control_node_key.pub")
+SCRIPT_DIR="$(dirname "${BASH_SOURCE[0]:-$0}")"
+sed -i "s/\${GCP_PROJECT_ID}/$PROJECT_NAME/g" "$SCRIPT_DIR/main.tf"
+ssh -o StrictHostKeyChecking=no -o BatchMode=yes -i ~/.ssh/test_cluster_key "$USER"@"$CONTROL_NODE_PUBLIC_IP" "true"
+REMOTE_CONTROL_PUBKEY=$(ssh -o BatchMode=yes -i ~/.ssh/test_cluster_key "$USER"@"$CONTROL_NODE_PUBLIC_IP" "ssh-keygen -t ecdsa -b 384 -f ~/.ssh/test_control_node_key -N '' -q && cat ~/.ssh/test_control_node_key.pub")
 echo "Got public key generated on $CONTROL_NODE_NAME: $REMOTE_CONTROL_PUBKEY"
-sed -i "s/\${CONTROL_KEY_PUB}/$REMOTE_CONTROL_PUBKEY/g" $(dirname "$0")/main.tf
+sed -i "s/\${CONTROL_KEY_PUB}/$REMOTE_CONTROL_PUBKEY/g" "$SCRIPT_DIR/main.tf"
 
 echo "Updated main.tf:"
-echo $(dirname "$0")/main.tf
+cat "$SCRIPT_DIR/main.tf"
 
 sudo apt-get update -y
 sudo apt-get install -y rsync
 
-rsync -av -e "ssh -o StrictHostKeyChecking=no -i ~/.ssh/test_cluster_key" --include 'control-startup.sh' --include 'main.tf' --exclude '*' $(dirname "$0") "$USER"@"$CONTROL_NODE_PUBLIC_IP":~/test-cluster-terraform/
+rsync -av -e "ssh -o BatchMode=yes -i ~/.ssh/test_cluster_key" --include 'control-startup.sh' --include 'main.tf' --exclude '*' "$SCRIPT_DIR/" "$USER"@"$CONTROL_NODE_PUBLIC_IP":~/test-cluster-terraform/
 
-ssh -i ~/.ssh/test_cluster_key "$USER"@"$CONTROL_NODE_PUBLIC_IP" 'bash ~/test-cluster-terraform/control-startup.sh'
+ssh -o BatchMode=yes -i ~/.ssh/test_cluster_key "$USER"@"$CONTROL_NODE_PUBLIC_IP" 'bash ~/test-cluster-terraform/control-startup.sh'

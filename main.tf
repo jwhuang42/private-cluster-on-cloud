@@ -65,8 +65,8 @@ resource "google_compute_instance" "vm_instances" {
   }
 
   network_interface {
-    network    = google_compute_network.custom_network.id
-    subnetwork = google_compute_subnetwork.custom_subnet.id
+    network    = data.google_compute_network.custom_network.id
+    subnetwork = data.google_compute_subnetwork.custom_subnet.id
     network_ip = each.value.internal_ip
   }
 

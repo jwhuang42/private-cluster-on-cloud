@@ -23,7 +23,7 @@ gcloud compute --project="$PROJECT_NAME" firewall-rules create "$VPC_NETWORK_NAM
 --action=ALLOW --rules=tcp:22 --source-ranges=0.0.0.0/0 --target-tags=allow-ssh
 
 # Generate SSH key on cloud shell to enable passwordless access.
-ssh-keygen -t ecdsa -b 521 -f ~/.ssh/test_cluster_key -N ""
+ssh-keygen -t ecdsa -b 521 -f ~/.ssh/test_cluster_key -N "" -q
 
 # Provision the control node.
 CONTROL_NODE_NAME=test-control-node
@@ -50,12 +50,15 @@ echo "******************************************************************"
 echo "Created $CONTROL_NODE_NAME with public IP: $CONTROL_NODE_PUBLIC_IP"
 echo "******************************************************************"
 
-scp -o StrictHostKeyChecking=no -i ~/.ssh/test_cluster_key -r $(dirname "$0") $USER@$CONTROL_NODE_PUBLIC_IP:~
+sed -i "s/\${GCP_PROJECT_ID}/$PROJECT_NAME/g" ~/test-cluster-terraform/main.tf
 
-ssh -i ~/.ssh/test_cluster_key $USER@$CONTROL_NODE_PUBLIC_IP 'bash ~/control-startup.sh'
+ssh -o StrictHostKeyChecking=no -i ~/.ssh/test_cluster_key $USER@$CONTROL_NODE_PUBLIC_IP "ssh-keygen -t ecdsa -b 384 -f ~/.ssh/test_control_node_key -N '' -q"
+REMOTE_CONTROL_PUBKEY=$(ssh -i ~/.ssh/test_cluster_key $USER@$CONTROL_NODE_PUBLIC_IP "cat ~/.ssh/test_control_node_key.pub")
+sed -i "s/\${CONTROL_KEY_PUB}/$REMOTE_CONTROL_PUBKEY/g" ~/test-cluster-terraform/main.tf
 
-ssh -i ~/.ssh/test_cluster_key $USER@$CONTROL_NODE_PUBLIC_IP "sed -i 's/\${GCP_PROJECT_ID}/$PROJECT_NAME/g' ~/test-cluster-terraform/main.tf"
+sudo apt-get update -y
+sudo apt-get install -y rsync
 
-REMOTE_CONTROL_PUBKEY=$(ssh -i ~/.ssh/test_cluster_key $USER@$CONTROL_NODE_PUBLIC_IP "ssh-keygen -t ecdsa -b 384 -f ~/.ssh/test_control_node_key -N '' -q && cat ~/.ssh/test_control_node_key.pub")
+rsync -av -e "ssh -o StrictHostKeyChecking=no -i ~/.ssh/test_cluster_key" --include 'control-startup.sh' --include 'main.tf' --exclude '*' $(dirname "$0") $USER@$CONTROL_NODE_PUBLIC_IP:~/test-cluster-terraform/
 
-ssh -i ~/.ssh/test_cluster_key $USER@$CONTROL_NODE_PUBLIC_IP "sed -i 's/\${CONTROL_KEY_PUB}/$REMOTE_CONTROL_PUBKEY/g' ~/test-cluster-terraform/main.tf"
+ssh -i ~/.ssh/test_cluster_key $USER@$CONTROL_NODE_PUBLIC_IP 'bash ~/test-cluster-terraform/control-startup.sh'

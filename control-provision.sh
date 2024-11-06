@@ -8,25 +8,54 @@ REGION=us-central1
 ZONE=us-central1-a
 
 # Create VPC with customized subnet and firewall rules.
-gcloud compute networks create "$VPC_NETWORK_NAME" --project="$PROJECT_NAME" --subnet-mode=custom --mtu=1460 --bgp-routing-mode=regional 
+if ! gcloud compute networks describe "$VPC_NETWORK_NAME" >/dev/null 2>&1; then
+    echo "Network $VPC_NETWORK_NAME does not exist. Creating it..."
+    gcloud compute networks create "$VPC_NETWORK_NAME" --project="$PROJECT_NAME" --subnet-mode=custom --mtu=1460 --bgp-routing-mode=regional 
+else
+    echo "Network $VPC_NETWORK_NAME already exists. Skipping creation."
+fi
 
-gcloud compute networks subnets create "$VPC_SUBNET_NAME" --project="$PROJECT_NAME" --range="$VPC_SUBNET_RANGE" \
---stack-type=IPV4_ONLY --network="$VPC_NETWORK_NAME" --region="$REGION" --enable-private-ip-google-access 
+if ! gcloud compute networks subnets describe "$VPC_SUBNET_NAME" --region="$REGION" >/dev/null 2>&1; then
+    echo "Subnet $VPC_SUBNET_NAME does not exist in region $REGION. Creating it..."
+    gcloud compute networks subnets create "$VPC_SUBNET_NAME" --project="$PROJECT_NAME" --range="$VPC_SUBNET_RANGE" \
+        --stack-type=IPV4_ONLY --network="$VPC_NETWORK_NAME" --region="$REGION" --enable-private-ip-google-access 
+else
+    echo "Subnet $VPC_SUBNET_NAME already exists in region $REGION. Skipping creation."
+fi
 
-gcloud compute firewall-rules create "$VPC_NETWORK_NAME"-allow-custom --project="$PROJECT_NAME" \
---network=projects/"$PROJECT_NAME"/global/networks/"$VPC_NETWORK_NAME" \
---description="Allows connection from any source to any instance on the network using custom protocols." \
---direction=INGRESS --priority=65534 --source-ranges="$VPC_SUBNET_RANGE" --action=ALLOW --rules=all
+ALLOW_CUSTOM_FIREWALL_RULE_NAME="$VPC_NETWORK_NAME"-allow-custom
+if ! gcloud compute firewall-rules describe $ALLOW_CUSTOM_FIREWALL_RULE_NAME >/dev/null 2>&1; then
+    echo "Firewall rule $FIREWALL_RULE_NAME does not exist. Creating it..."
+    gcloud compute firewall-rules create $ALLOW_CUSTOM_FIREWALL_RULE_NAME --project="$PROJECT_NAME" \
+        --network=projects/"$PROJECT_NAME"/global/networks/"$VPC_NETWORK_NAME" \
+        --description="Allows connection from any source to any instance on the network using custom protocols." \
+        --direction=INGRESS --priority=65534 --source-ranges="$VPC_SUBNET_RANGE" --action=ALLOW --rules=all
+else
+    echo "Firewall rule $ALLOW_CUSTOM_FIREWALL_RULE_NAME already exists. Skipping creation."
+fi
 
-gcloud compute --project="$PROJECT_NAME" firewall-rules create "$VPC_NETWORK_NAME"-allow-ssh \
---description="Allow ssh to the VPC nodes from instances outside the VPC." --direction=INGRESS --priority=1000 --network="$VPC_NETWORK_NAME" \
---action=ALLOW --rules=tcp:22 --source-ranges=0.0.0.0/0 --target-tags=allow-ssh
+ALLOW_SSH_FIREWALL_RULE_NAME="$VPC_NETWORK_NAME"-allow-ssh
+if ! gcloud compute firewall-rules describe $ALLOW_SSH_FIREWALL_RULE_NAME >/dev/null 2>&1; then
+    echo "Firewall rule $FIREWALL_RULE_NAME does not exist. Creating it..."
+    gcloud compute --project="$PROJECT_NAME" firewall-rules create $ALLOW_SSH_FIREWALL_RULE_NAME \
+        --description="Allow ssh to the VPC nodes from instances outside the VPC." --direction=INGRESS --priority=1000 --network="$VPC_NETWORK_NAME" \
+        --action=ALLOW --rules=tcp:22 --source-ranges=0.0.0.0/0 --target-tags=allow-ssh
+else
+    echo "Firewall rule $ALLOW_SSH_FIREWALL_RULE_NAME already exists. Skipping creation."
+fi
 
 # Generate SSH key on cloud shell to enable passwordless access.
 ssh-keygen -t ecdsa -b 521 -f ~/.ssh/test_cluster_key -N "" -q
 
 # Provision the control node.
 CONTROL_NODE_NAME=test-control-node
+# Check if the instance exists
+if gcloud compute instances describe "$CONTROL_NODE_NAME" --zone "$ZONE" >/dev/null 2>&1; then
+    echo "Instance $CONTROL_NODE_NAME exists. Deleting it before creating new one..."
+    gcloud compute instances delete "$CONTROL_NODE_NAME" --zone "$ZONE" --quiet
+else
+    echo "Instance $CONTROL_NODE_NAME does not exist. Proceeding with creation..."
+fi
 gcloud compute instances create "$CONTROL_NODE_NAME" \
     --project="$PROJECT_NAME" \
     --zone="$ZONE" \
@@ -50,11 +79,9 @@ echo "******************************************************************"
 echo "Created $CONTROL_NODE_NAME with public IP: $CONTROL_NODE_PUBLIC_IP"
 echo "******************************************************************"
 
-sed -i "s/\${GCP_PROJECT_ID}/$PROJECT_NAME/g" ~/test-cluster-terraform/main.tf
-
-ssh -o StrictHostKeyChecking=no -i ~/.ssh/test_cluster_key $USER@$CONTROL_NODE_PUBLIC_IP "ssh-keygen -t ecdsa -b 384 -f ~/.ssh/test_control_node_key -N '' -q"
-REMOTE_CONTROL_PUBKEY=$(ssh -i ~/.ssh/test_cluster_key $USER@$CONTROL_NODE_PUBLIC_IP "cat ~/.ssh/test_control_node_key.pub")
-sed -i "s/\${CONTROL_KEY_PUB}/$REMOTE_CONTROL_PUBKEY/g" ~/test-cluster-terraform/main.tf
+sed -i "s/\${GCP_PROJECT_ID}/$PROJECT_NAME/g" $(dirname "$0")/main.tf
+REMOTE_CONTROL_PUBKEY=$(ssh -o StrictHostKeyChecking=no -i ~/.ssh/test_cluster_key $USER@$CONTROL_NODE_PUBLIC_IP "ssh-keygen -t ecdsa -b 384 -f ~/.ssh/test_control_node_key -N '' -q && cat ~/.ssh/test_control_node_key.pub")
+sed -i "s/\${CONTROL_KEY_PUB}/$REMOTE_CONTROL_PUBKEY/g" $(dirname "$0")/main.tf
 
 sudo apt-get update -y
 sudo apt-get install -y rsync

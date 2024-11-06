@@ -46,6 +46,10 @@ fi
 
 # Generate SSH key on cloud shell to enable passwordless access.
 ssh-keygen -t ecdsa -b 521 -f ~/.ssh/test_cluster_key -N "" -q
+if [ -f ~/.ssh/known_hosts ]; then
+    > ~/.ssh/known_hosts
+    echo "Cleared the contents of ~/.ssh/known_hosts"
+fi
 
 # Provision the control node.
 CONTROL_NODE_NAME=test-control-node
@@ -53,9 +57,9 @@ CONTROL_NODE_NAME=test-control-node
 if gcloud compute instances describe "$CONTROL_NODE_NAME" --zone "$ZONE" >/dev/null 2>&1; then
     echo "Instance $CONTROL_NODE_NAME exists. Deleting it before creating new one..."
     gcloud compute instances delete "$CONTROL_NODE_NAME" --zone "$ZONE" --quiet
-else
-    echo "Instance $CONTROL_NODE_NAME does not exist. Proceeding with creation..."
+    echo "Instance $CONTROL_NODE_NAME deleted."
 fi
+echo "Instance $CONTROL_NODE_NAME does not exist. Proceeding with creation..."
 gcloud compute instances create "$CONTROL_NODE_NAME" \
     --project="$PROJECT_NAME" \
     --zone="$ZONE" \
@@ -81,7 +85,11 @@ echo "******************************************************************"
 
 sed -i "s/\${GCP_PROJECT_ID}/$PROJECT_NAME/g" $(dirname "$0")/main.tf
 REMOTE_CONTROL_PUBKEY=$(ssh -o StrictHostKeyChecking=no -i ~/.ssh/test_cluster_key $USER@$CONTROL_NODE_PUBLIC_IP "ssh-keygen -t ecdsa -b 384 -f ~/.ssh/test_control_node_key -N '' -q && cat ~/.ssh/test_control_node_key.pub")
+echo "Got public key generated on $CONTROL_NODE_NAME: $REMOTE_CONTROL_PUBKEY"
 sed -i "s/\${CONTROL_KEY_PUB}/$REMOTE_CONTROL_PUBKEY/g" $(dirname "$0")/main.tf
+
+echo "Updated main.tf:"
+cat $(dirname "$0")/main.tf
 
 sudo apt-get update -y
 sudo apt-get install -y rsync

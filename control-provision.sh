@@ -83,7 +83,7 @@ echo "******************************************************************"
 echo "Created $CONTROL_NODE_NAME with public IP: $CONTROL_NODE_PUBLIC_IP"
 echo "******************************************************************"
 
-SSH_KEY="$HOME/.ssh/test_cluster_key"
+SSH_KEY="~/.ssh/test_cluster_key"
 SSH_CONFIG="$HOME/.ssh/config"
 
 # Ensure the .ssh directory exists
@@ -111,7 +111,6 @@ Host $CONTROL_NODE_NAME
     HostName $CONTROL_NODE_PUBLIC_IP
     User $USER
     IdentityFile $SSH_KEY
-    StrictHostKeyChecking no
     BatchMode yes
 EOF
 

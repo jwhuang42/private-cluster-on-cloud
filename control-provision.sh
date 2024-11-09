@@ -113,6 +113,9 @@ Host $CONTROL_NODE_NAME
     BatchMode yes
 EOF
 
+# Add the remote host key to ~/.ssh/known_hosts file before running the SSH command to avoid Host Key Issue.
+ssh-keyscan -H $CONTROL_NODE_PUBLIC_IP 2>/dev/null | sort | uniq >> ~/.ssh/known_hosts
+
 # Attempt to SSH using the 'test-control-node' alias
 echo "Attempting SSH connection to '"$CONTROL_NODE_NAME"'..."
 if ssh "$CONTROL_NODE_NAME" "true"; then
@@ -123,9 +126,6 @@ else
     echo "1. **Unknown Host**:"
     echo "   - The hostname '"$CONTROL_NODE_NAME"' could not be resolved."
     echo "   - Ensure the IP address in the SSH config is correct (\`HostName $CONTROL_NODE_PUBLIC_IP\`)."
-    echo "   - If the IP address changed, update the SSH config file or remove the old entry from \`~/.ssh/known_hosts\` using:"
-    echo "     \`ssh-keygen -R $CONTROL_NODE_PUBLIC_IP\`"
-    echo "   - Verify DNS resolution: \`nslookup $CONTROL_NODE_PUBLIC_IP\` or \`dig $CONTROL_NODE_PUBLIC_IP\`."
     echo
     echo "2. **Connection Closed by Remote Host**:"
     echo "   - The SSH server may have terminated the connection. Check the SSH server logs on the remote host (e.g., /var/log/auth.log or /var/log/secure)."

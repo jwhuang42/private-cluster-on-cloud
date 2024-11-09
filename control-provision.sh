@@ -118,33 +118,10 @@ EOF
 
 # Attempt to SSH using the 'test-control-node' alias
 echo "Attempting SSH connection to '"$CONTROL_NODE_NAME"'..."
-if ssh "$CONTROL_NODE_NAME" "true"; then
+if ssh -vvv $CONTROL_NODE_NAME "true"; then
     echo "SSH connection successful."
 else
-    echo "Error: SSH connection failed. Here are some possible issues and debugging steps:"
-    echo
-    echo "1. **Unknown Host**:"
-    echo "   - The hostname '"$CONTROL_NODE_NAME"' could not be resolved."
-    echo "   - Ensure the IP address in the SSH config is correct (\`HostName $CONTROL_NODE_PUBLIC_IP\`)."
-    echo
-    echo "2. **Connection Closed by Remote Host**:"
-    echo "   - The SSH server may have terminated the connection. Check the SSH server logs on the remote host (e.g., /var/log/auth.log or /var/log/secure)."
-    echo "   - Ensure the SSH service is running on the remote host: \`sudo systemctl status ssh\` or \`sudo systemctl status sshd\`."
-    echo
-    echo "3. **Connection Refused**:"
-    echo "   - The SSH service may not be running or listening on the default port (22)."
-    echo "   - Check if the SSH port is correct: \`nmap -p 22 $CONTROL_NODE_PUBLIC_IP\`."
-    echo "   - Ensure there is no firewall blocking the SSH port (e.g., iptables or cloud firewall rules)."
-    echo
-    echo "4. **Permission Denied (Public Key Authentication Failed)**:"
-    echo "   - Verify that the SSH key is correct and has the right permissions: \`chmod 600 $SSH_KEY\`."
-    echo "   - Ensure the public key is added to the \`~/.ssh/authorized_keys\` file on the remote host."
-    echo "   - Check if the correct user is specified in the SSH config (e.g., $USER)."
-    echo
-    echo "5. **Host Unreachable or Network Issues**:"
-    echo "   - Confirm the IP address of the control node: \`ping $CONTROL_NODE_PUBLIC_IP\`."
-    echo "   - Verify network connectivity and routing: \`traceroute $CONTROL_NODE_PUBLIC_IP\`."
-    echo "   - Check if there are any VPNs or proxies affecting the connection."
+    echo "Error: SSH connection failed."
     exit 1
 fi
 

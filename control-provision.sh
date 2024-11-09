@@ -3,21 +3,21 @@
 VPC_NETWORK_NAME=test-cluster-network
 VPC_SUBNET_NAME=test-cluster-subnet
 VPC_SUBNET_RANGE=192.168.0.0/24
-PROJECT_NAME=$(gcloud config get-value project)
+PROJECT_ID=$(gcloud config get-value project)
 REGION=us-central1
 ZONE=us-central1-a
 
 # Create VPC with customized subnet and firewall rules.
 if ! gcloud compute networks describe "$VPC_NETWORK_NAME" >/dev/null 2>&1; then
     echo "Network $VPC_NETWORK_NAME does not exist. Creating it..."
-    gcloud compute networks create "$VPC_NETWORK_NAME" --project="$PROJECT_NAME" --subnet-mode=custom --mtu=1460 --bgp-routing-mode=regional 
+    gcloud compute networks create "$VPC_NETWORK_NAME" --project="$PROJECT_ID" --subnet-mode=custom --mtu=1460 --bgp-routing-mode=regional 
 else
     echo "Network $VPC_NETWORK_NAME already exists. Skipping creation."
 fi
 
 if ! gcloud compute networks subnets describe "$VPC_SUBNET_NAME" --region="$REGION" >/dev/null 2>&1; then
     echo "Subnet $VPC_SUBNET_NAME does not exist in region $REGION. Creating it..."
-    gcloud compute networks subnets create "$VPC_SUBNET_NAME" --project="$PROJECT_NAME" --range="$VPC_SUBNET_RANGE" \
+    gcloud compute networks subnets create "$VPC_SUBNET_NAME" --project="$PROJECT_ID" --range="$VPC_SUBNET_RANGE" \
         --stack-type=IPV4_ONLY --network="$VPC_NETWORK_NAME" --region="$REGION" --enable-private-ip-google-access 
 else
     echo "Subnet $VPC_SUBNET_NAME already exists in region $REGION. Skipping creation."
@@ -26,8 +26,8 @@ fi
 ALLOW_CUSTOM_FIREWALL_RULE_NAME="$VPC_NETWORK_NAME"-allow-custom
 if ! gcloud compute firewall-rules describe $ALLOW_CUSTOM_FIREWALL_RULE_NAME >/dev/null 2>&1; then
     echo "Firewall rule $FIREWALL_RULE_NAME does not exist. Creating it..."
-    gcloud compute firewall-rules create $ALLOW_CUSTOM_FIREWALL_RULE_NAME --project="$PROJECT_NAME" \
-        --network=projects/"$PROJECT_NAME"/global/networks/"$VPC_NETWORK_NAME" \
+    gcloud compute firewall-rules create $ALLOW_CUSTOM_FIREWALL_RULE_NAME --project="$PROJECT_ID" \
+        --network=projects/"$PROJECT_ID"/global/networks/"$VPC_NETWORK_NAME" \
         --description="Allows connection from any source to any instance on the network using custom protocols." \
         --direction=INGRESS --priority=65534 --source-ranges="$VPC_SUBNET_RANGE" --action=ALLOW --rules=all
 else
@@ -37,7 +37,7 @@ fi
 ALLOW_SSH_FIREWALL_RULE_NAME="$VPC_NETWORK_NAME"-allow-ssh
 if ! gcloud compute firewall-rules describe $ALLOW_SSH_FIREWALL_RULE_NAME >/dev/null 2>&1; then
     echo "Firewall rule $FIREWALL_RULE_NAME does not exist. Creating it..."
-    gcloud compute --project="$PROJECT_NAME" firewall-rules create $ALLOW_SSH_FIREWALL_RULE_NAME \
+    gcloud compute --project="$PROJECT_ID" firewall-rules create $ALLOW_SSH_FIREWALL_RULE_NAME \
         --description="Allow ssh to the VPC nodes from instances outside the VPC." --direction=INGRESS --priority=1000 --network="$VPC_NETWORK_NAME" \
         --action=ALLOW --rules=tcp:22 --source-ranges=0.0.0.0/0 --target-tags=allow-ssh
 else
@@ -61,7 +61,7 @@ if gcloud compute instances describe "$CONTROL_NODE_NAME" --zone "$ZONE" >/dev/n
 fi
 echo "Instance $CONTROL_NODE_NAME does not exist. Proceeding with creation..."
 gcloud compute instances create "$CONTROL_NODE_NAME" \
-    --project="$PROJECT_NAME" \
+    --project="$PROJECT_ID" \
     --zone="$ZONE" \
     --machine-type=e2-small \
     --tags=allow-ssh \
@@ -83,19 +83,91 @@ echo "******************************************************************"
 echo "Created $CONTROL_NODE_NAME with public IP: $CONTROL_NODE_PUBLIC_IP"
 echo "******************************************************************"
 
+SSH_KEY="$HOME/.ssh/test_cluster_key"
+SSH_CONFIG="$HOME/.ssh/config"
+
+# Ensure the .ssh directory exists
+mkdir -p "$HOME/.ssh"
+chmod 700 "$HOME/.ssh"
+# Ensure the SSH config file exists
+touch "$SSH_CONFIG"
+chmod 600 "$SSH_CONFIG"
+
+# Check if the Host section already exists in ~/.ssh/config
+# Remove existing 'Host test-control-node' section if it exists
+if grep -q "Host "$CONTROL_NODE_NAME"" "$SSH_CONFIG"; then
+    echo "Found existing configuration for '"$CONTROL_NODE_NAME"'. Removing it..."
+    # Use sed to delete the block between 'Host test-control-node' and the next 'Host' or end of file
+    sed -i "|^Host $CONTROL_NODE_NAME$|,|^Host |d" "$SSH_CONFIG"
+fi
+
+# Append the new Host section to the ~/.ssh/config file
+echo "Adding SSH configuration for "$CONTROL_NODE_NAME"..."
+cat >> "$SSH_CONFIG" <<EOF
+
+Host $CONTROL_NODE_NAME
+    HostName $CONTROL_NODE_PUBLIC_IP
+    User $USER
+    IdentityFile $SSH_KEY
+    StrictHostKeyChecking no
+    BatchMode yes
+EOF
+
+# Attempt to SSH using the 'test-control-node' alias
+echo "Attempting SSH connection to '"$CONTROL_NODE_NAME"'..."
+if ssh "$CONTROL_NODE_NAME" "true"; then
+    echo "SSH connection successful."
+else
+    echo "Error: SSH connection failed. Here are some possible issues and debugging steps:"
+    echo
+    echo "1. **Unknown Host**:"
+    echo "   - The hostname '"$CONTROL_NODE_NAME"' could not be resolved."
+    echo "   - Ensure the IP address in the SSH config is correct (\`HostName $CONTROL_NODE_PUBLIC_IP\`)."
+    echo "   - If the IP address changed, update the SSH config file or remove the old entry from \`~/.ssh/known_hosts\` using:"
+    echo "     \`ssh-keygen -R $CONTROL_NODE_PUBLIC_IP\`"
+    echo "   - Verify DNS resolution: \`nslookup $CONTROL_NODE_PUBLIC_IP\` or \`dig $CONTROL_NODE_PUBLIC_IP\`."
+    echo
+    echo "2. **Connection Closed by Remote Host**:"
+    echo "   - The SSH server may have terminated the connection. Check the SSH server logs on the remote host (e.g., /var/log/auth.log or /var/log/secure)."
+    echo "   - Ensure the SSH service is running on the remote host: \`sudo systemctl status ssh\` or \`sudo systemctl status sshd\`."
+    echo
+    echo "3. **Connection Refused**:"
+    echo "   - The SSH service may not be running or listening on the default port (22)."
+    echo "   - Check if the SSH port is correct: \`nmap -p 22 $CONTROL_NODE_PUBLIC_IP\`."
+    echo "   - Ensure there is no firewall blocking the SSH port (e.g., iptables or cloud firewall rules)."
+    echo
+    echo "4. **Permission Denied (Public Key Authentication Failed)**:"
+    echo "   - Verify that the SSH key is correct and has the right permissions: \`chmod 600 $SSH_KEY\`."
+    echo "   - Ensure the public key is added to the \`~/.ssh/authorized_keys\` file on the remote host."
+    echo "   - Check if the correct user is specified in the SSH config (e.g., $USER)."
+    echo
+    echo "5. **Host Unreachable or Network Issues**:"
+    echo "   - Confirm the IP address of the control node: \`ping $CONTROL_NODE_PUBLIC_IP\`."
+    echo "   - Verify network connectivity and routing: \`traceroute $CONTROL_NODE_PUBLIC_IP\`."
+    echo "   - Check if there are any VPNs or proxies affecting the connection."
+    exit 1
+fi
+
+# Update the Terraform configuration with the current project ID
 SCRIPT_DIR="$(dirname "${BASH_SOURCE[0]:-$0}")"
-sed -i "s/\${GCP_PROJECT_ID}/$PROJECT_NAME/g" "$SCRIPT_DIR/main.tf"
-ssh -o StrictHostKeyChecking=no -o BatchMode=yes -i ~/.ssh/test_cluster_key "$USER"@"$CONTROL_NODE_PUBLIC_IP" "true"
-REMOTE_CONTROL_PUBKEY=$(ssh -o BatchMode=yes -i ~/.ssh/test_cluster_key "$USER"@"$CONTROL_NODE_PUBLIC_IP" "ssh-keygen -t ecdsa -b 384 -f ~/.ssh/test_control_node_key -N '' -q && cat ~/.ssh/test_control_node_key.pub")
+sed -i "s/\${GCP_PROJECT_ID}/$PROJECT_ID/g" "$SCRIPT_DIR/main.tf"
+
+# Generate the public key on the remote control node and retrieve it
+REMOTE_CONTROL_PUBKEY=$(ssh $CONTROL_NODE_NAME "ssh-keygen -t ecdsa -b 384 -f ~/.ssh/test_control_node_key -N '' -q && cat ~/.ssh/test_control_node_key.pub")
 echo "Got public key generated on $CONTROL_NODE_NAME: $REMOTE_CONTROL_PUBKEY"
+
+# Update the Terraform configuration with the new public key
 sed -i "s|\${CONTROL_KEY_PUB}|$REMOTE_CONTROL_PUBKEY|g" "$SCRIPT_DIR/main.tf"
 
 echo "Updated main.tf:"
 cat "$SCRIPT_DIR/main.tf"
 
+# Install rsync if not already installed
 sudo apt-get update -y
 sudo apt-get install -y rsync
 
-rsync -av -e "ssh -o BatchMode=yes -i ~/.ssh/test_cluster_key" --include 'control-startup.sh' --include 'main.tf' --exclude '*' "$SCRIPT_DIR/" "$USER"@"$CONTROL_NODE_PUBLIC_IP":~/test-cluster-terraform/
+# Use rsync to transfer files to the control node
+rsync -av -e "ssh $CONTROL_NODE_NAME" --include 'control-startup.sh' --include 'main.tf' --exclude '*' "$SCRIPT_DIR/" "$CONTROL_NODE_NAME:~/test-cluster-terraform/"
 
-ssh -o BatchMode=yes -i ~/.ssh/test_cluster_key "$USER"@"$CONTROL_NODE_PUBLIC_IP" 'bash ~/test-cluster-terraform/control-startup.sh'
+# Execute the startup script on the control node
+ssh $CONTROL_NODE_NAME 'bash ~/test-cluster-terraform/control-startup.sh'

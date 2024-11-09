@@ -111,11 +111,16 @@ Host $CONTROL_NODE_NAME
     HostName $CONTROL_NODE_PUBLIC_IP
     User $USER
     IdentityFile $SSH_KEY
-    StrictHostKeyChecking no
+    BatchMode yes
 EOF
 
 # Add the remote host key to ~/.ssh/known_hosts file before running the SSH command to avoid Host Key Issue.
-ssh-keyscan -H $CONTROL_NODE_PUBLIC_IP 2>/dev/null | sort | uniq >> ~/.ssh/known_hosts
+echo "Scanning and adding the control node's SSH key to known_hosts..."
+ssh-keyscan -H "$CONTROL_NODE_PUBLIC_IP" 2>/dev/null | sort | uniq >> "$HOME/.ssh/known_hosts"
+
+# Display the newly added entry from known_hosts
+echo "The following key was added to ~/.ssh/known_hosts:"
+grep "$CONTROL_NODE_PUBLIC_IP" "$HOME/.ssh/known_hosts"
 
 # Attempt to SSH using the 'test-control-node' alias
 echo "Attempting SSH connection to '"$CONTROL_NODE_NAME"'..."

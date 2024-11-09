@@ -1,5 +1,32 @@
 #!/bin/bash
 
+# Function to perform ssh-keyscan with retries
+perform_ssh_keyscan() {
+    local retries=3
+    local attempt=0
+    local scan_output=""
+
+    while [[ $attempt -lt $retries ]]; do
+        echo "Attempting ssh-keyscan (attempt $((attempt + 1))/$retries)..."
+        scan_output=$(ssh-keyscan -H "$CONTROL_NODE_PUBLIC_IP" 2>/dev/null)
+
+        if [[ -n "$scan_output" ]]; then
+            echo "Successfully retrieved the SSH key."
+            echo "$scan_output" | sort | uniq >> "$HOME/.ssh/known_hosts"
+            echo "The following key was added to ~/.ssh/known_hosts:"
+            echo "$scan_output"
+            return 0
+        fi
+
+        echo "Warning: ssh-keyscan returned an empty response. Retrying in 2 seconds..."
+        attempt=$((attempt + 1))
+        sleep 2
+    done
+
+    echo "Error: Failed to retrieve the SSH key after $retries attempts. Please check the network and SSH service."
+    return 1
+}
+
 VPC_NETWORK_NAME=test-cluster-network
 VPC_SUBNET_NAME=test-cluster-subnet
 VPC_SUBNET_RANGE=192.168.0.0/24
@@ -114,13 +141,8 @@ Host $CONTROL_NODE_NAME
     BatchMode yes
 EOF
 
-# Add the remote host key to ~/.ssh/known_hosts file before running the SSH command to avoid Host Key Issue.
-echo "Scanning and adding the control node's SSH key to known_hosts..."
-ssh-keyscan -H "$CONTROL_NODE_PUBLIC_IP" 2>/dev/null | sort | uniq >> "$HOME/.ssh/known_hosts"
-
-# Display the newly added entry from known_hosts
-echo "The following key was added to ~/.ssh/known_hosts:"
-grep "$CONTROL_NODE_PUBLIC_IP" "$HOME/.ssh/known_hosts"
+# Perform ssh-keyscan with retries
+perform_ssh_keyscan
 
 # Attempt to SSH using the 'test-control-node' alias
 echo "Attempting SSH connection to '"$CONTROL_NODE_NAME"'..."

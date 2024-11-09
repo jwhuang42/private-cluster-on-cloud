@@ -111,6 +111,7 @@ Host $CONTROL_NODE_NAME
     HostName $CONTROL_NODE_PUBLIC_IP
     User $USER
     IdentityFile $SSH_KEY
+    BatchMode yes
     StrictHostKeyChecking no
     UserKnownHostsFile /dev/null
 EOF

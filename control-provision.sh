@@ -93,13 +93,15 @@ chmod 700 "$HOME/.ssh"
 touch "$SSH_CONFIG"
 chmod 600 "$SSH_CONFIG"
 
-# Check if the Host section already exists in ~/.ssh/config
-# Remove existing 'Host test-control-node' section if it exists
-if grep -q "Host "$CONTROL_NODE_NAME"" "$SSH_CONFIG"; then
-    echo "Found existing configuration for '"$CONTROL_NODE_NAME"'. Removing it..."
-    # Use sed to delete the block between 'Host test-control-node' and the next 'Host' or end of file
-    sed -i "|^Host $CONTROL_NODE_NAME$|,|^Host |d" "$SSH_CONFIG"
+# Backup existing SSH config file
+if [[ -f "$SSH_CONFIG" ]]; then
+    echo "Backing up existing SSH config file to $SSH_CONFIG.bak"
+    cp "$SSH_CONFIG" "$SSH_CONFIG.bak"
 fi
+
+# Clean up the existing SSH config file
+echo "Cleaning up $SSH_CONFIG file..."
+> "$SSH_CONFIG"
 
 # Append the new Host section to the ~/.ssh/config file
 echo "Adding SSH configuration for "$CONTROL_NODE_NAME"..."

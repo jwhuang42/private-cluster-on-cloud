@@ -108,6 +108,5 @@ Host $CONTROL_NODE_NAME
 EOF
 
 SCRIPT_DIR="$(dirname "${BASH_SOURCE[0]:-$0}")"
-gcloud compute scp "$SCRIPT_DIR/main.tf" "$SCRIPT_DIR/control-startup.sh" \
-    $USER@$CONTROL_NODE_PUBLIC_IP:~ \
-    --zone $ZONE
+scp "$SCRIPT_DIR/main.tf" "$SCRIPT_DIR/control-startup.sh" \
+    $USER@$CONTROL_NODE_NAME:~

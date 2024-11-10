@@ -75,7 +75,7 @@ Go to cloud shell instance and add the public key to the `test-control-node`:
 ``` 
 gcloud compute instances add-metadata test-control-node \
   --zone=us-central1-a \
-  --metadata "ssh-keys=$USER:<public-key-value-from-local-machine>  
+  --metadata "ssh-keys=$USER:<public-key-value-from-local-machine>"
 ``` 
 **Note**: the username should be the one used in the control node, not the one on the local machine!
 

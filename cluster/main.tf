@@ -79,7 +79,8 @@ resource "null_resource" "generate_ssh_config" {
   # Trigger the resource if the instances list or SSH key changes
   triggers = {
     instances_json = jsonencode(local.instances)
-    key_file       = filemd5(pathexpand("~/.ssh/test_cluster_key"))
+    key_exists = fileexists(pathexpand("~/.ssh/test_cluster_key"))
+    key_checksum = fileexists(pathexpand("~/.ssh/test_cluster_key")) ? filemd5(pathexpand("~/.ssh/test_cluster_key")) : "missing"
   }
 
   provisioner "local-exec" {

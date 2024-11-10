@@ -106,9 +106,14 @@ Set up VSCode remote work using [this guide](https://code.visualstudio.com/docs/
 
 After opening the `test-cluster-terraform` folder, you should see a `main.tf` file. Use any language model to help you understand the purpose of this file and how to configure it for batch VM creation. Then, use Terraform to plan, validate, and apply the configuration.
 
+Check if the cluster provision is planned as expected:
+```
+terraform plan -auto-approve -var="project="$(gcloud config get-value project)""
+```
+
 Apply the script using terraform after proper changes are applied in the `main.tf`:
 ```
-terraform apply -auto-approve -var="project_id="$(gcloud config get-value project)""
+terraform apply -auto-approve -var="project="$(gcloud config get-value project)""
 ```
 
 Nodes created via this terraform script generally shouldn't be exposed to the public internet. So you might want to learn about ssh tunneling to help you view web pages on those nodes.

@@ -23,8 +23,8 @@ You should have a Google Cloud account with a test project created.
 
 Also, this guide uses the compute engine. So remember to enable the Compute Engine API on the GCP Console; otherwise, an error will be reported.
 
-### Step 1: Provision Test Control Node
-
+### Step 1: Prepare the Test Control Node
+#### Step 1.1: Provision Test Control Node
 The first step is to create a custom VPN and set up the control GCE node. This guide uses the `gcloud` command-line tool to ensure configurations are properly adjusted. To simplify the setup and avoid interference with the local environment, [Cloud Shell](https://cloud.google.com/shell/docs) is a preferred tool in this step. The instructions below assume you have opened a Cloud Shell terminal session. If you prefer to try this on your local machine, make sure to install `gcloud` and run `gcloud auth login` before executing any commands.
 
 Clone this repository to cloud shell terminal:
@@ -32,14 +32,40 @@ Clone this repository to cloud shell terminal:
 git clone https://github.com/jwhuang42/private-cluster-on-cloud.git $HOME/private-cluster-on-cloud/
 ```
 
-Add execution permission to the shell scripts:  
+Add execution permission to the control shell scripts and enters the directory:  
 ```
-chmod +x $HOME/private-cluster-on-cloud/*.sh  
+chmod +x $HOME/private-cluster-on-cloud/control/*.sh && cd $HOME/private-cluster-on-cloud/control/
 ```
 
-Execute the `control-provision.sh` to provision the control node and set up the test environment. This would bring up a control node.
+Init terraform.
 ``` 
-$HOME/private-cluster-on-cloud/control-provision.sh
+terraform init
+```
+Apply the script using terraform:
+```
+terraform apply -auto-approve -var="project_id="$(gcloud config get-value project)"" -var="user=$USER"
+```
+#### Step 1.2: Set up Test Control Node
+Enter the control node:
+```
+ssh test-control-node
+```
+Clone the repo also on the new control node:
+```
+git clone https://github.com/jwhuang42/private-cluster-on-cloud.git $HOME/private-cluster-on-cloud/
+```
+Add execution permission to the control shell scripts and enters the directory:  
+```
+chmod +x $HOME/private-cluster-on-cloud/cluster/*.sh && cd $HOME/private-cluster-on-cloud/cluster/
+```
+
+Init terraform.
+``` 
+terraform init
+```
+Apply the script using terraform:
+```
+terraform apply -auto-approve -var="project_id="$(gcloud config get-value project)""
 ```
 
 ### Step 2: Establish SSH connection from the Local Machine

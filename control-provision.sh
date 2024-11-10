@@ -97,7 +97,6 @@ echo "Cleaning up $SSH_CONFIG file..."
 # Append the new Host section to the ~/.ssh/config file
 echo "Adding SSH configuration for "$CONTROL_NODE_NAME"..."
 cat >> "$SSH_CONFIG" <<EOF
-
 Host $CONTROL_NODE_NAME
     HostName $CONTROL_NODE_PUBLIC_IP
     User $USER
@@ -106,7 +105,9 @@ Host $CONTROL_NODE_NAME
     StrictHostKeyChecking no
     UserKnownHostsFile /dev/null
 EOF
+cat ~/.ssh/config
 
 SCRIPT_DIR="$(dirname "${BASH_SOURCE[0]:-$0}")"
-scp "$SCRIPT_DIR/main.tf" "$SCRIPT_DIR/control-startup.sh" \
-    $USER@$CONTROL_NODE_NAME:~
+gcloud compute scp "$SCRIPT_DIR/main.tf" "$SCRIPT_DIR/control-startup.sh" \
+    $USER@$CONTROL_NODE_NAME:~ \
+    --zone $ZONE

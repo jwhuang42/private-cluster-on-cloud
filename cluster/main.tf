@@ -71,3 +71,18 @@ resource "google_compute_instance" "vm_instances" {
     ssh-keys = "root:${data.local_file.ssh_public_key.content}"
   }
 }
+
+# Generate SSH config file using a shell script
+resource "null_resource" "generate_ssh_config" {
+  depends_on = [google_compute_instance.vm_instances]
+
+  # Trigger the resource if the instances list or SSH key changes
+  triggers = {
+    instances_json = jsonencode(local.instances)
+    key_file       = filemd5(pathexpand("~/.ssh/test_cluster_key"))
+  }
+
+  provisioner "local-exec" {
+    command = "bash ./update-cluster-ssh-config.sh ~/.ssh/config ~/.ssh/test_cluster_key '${jsonencode(local.instances)}'"
+  }
+}

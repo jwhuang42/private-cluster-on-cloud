@@ -4,7 +4,7 @@
 sudo apt-get update -y
 
 # Install prerequisites
-sudo apt-get install -y git wget python3 python3-pip python3-venv gnupg software-properties-common
+sudo apt-get install -y git jq wget python3 python3-pip python3-venv gnupg software-properties-common
 
 VENV_NAME="ansible-venv"
 VENV_PATH="$HOME/$VENV_NAME"

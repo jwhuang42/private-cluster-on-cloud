@@ -41,14 +41,7 @@ Execute the `control-provision.sh` to provision the control node and set up the 
 ``` 
 $HOME/private-cluster-on-cloud/control-provision.sh
 ```
-SSH to the newly created control node:
-```
-ssh test-control-node
-```
-Execute the `control-startup.sh` to update `main.tf` with proper default value and install Ansible, terraform:
-```
-chmod +x control-startup.sh && $HOME/control-startup.sh
-```
+
 ### Step 2: Establish SSH connection from the Local Machine
 On your local machine, create a ssh key pair:  
 ``` 

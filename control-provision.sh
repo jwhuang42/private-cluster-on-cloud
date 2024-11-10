@@ -108,6 +108,5 @@ EOF
 cat $SSH_CONFIG
 
 SCRIPT_DIR="$(dirname "${BASH_SOURCE[0]:-$0}")"
-scp -F $SSH_CONFIG "$SCRIPT_DIR/main.tf" "$SCRIPT_DIR/control-startup.sh" \
-    $USER@$CONTROL_NODE_NAME:~ \
-    --zone $ZONE
+scp -p -F $SSH_CONFIG "$SCRIPT_DIR/main.tf" "$SCRIPT_DIR/control-startup.sh" $CONTROL_NODE_NAME:~
+ssh -F $SSH_CONFIG $CONTROL_NODE_NAME 'bash ~/control-startup.sh'

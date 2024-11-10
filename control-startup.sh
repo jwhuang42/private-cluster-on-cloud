@@ -75,8 +75,9 @@ echo "Terraform version:"
 echo "****************************************************"
 terraform --version
 
-mkdir -p terraform-script
-mv "$SCRIPT_DIR/main.tf" terraform-script
+TERRAFORM_HOMEDIR=$HOME/terraform-script
+mkdir -p $TERRAFORM_HOMEDIR
+mv "$SCRIPT_DIR/main.tf" $TERRAFORM_HOMEDIR
 
-cd terraform-script
+cd $TERRAFORM_HOMEDIR
 terraform init

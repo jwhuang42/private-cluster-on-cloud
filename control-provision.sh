@@ -105,9 +105,9 @@ Host $CONTROL_NODE_NAME
     StrictHostKeyChecking no
     UserKnownHostsFile /dev/null
 EOF
-cat ~/.ssh/config
+cat $SSH_CONFIG
 
 SCRIPT_DIR="$(dirname "${BASH_SOURCE[0]:-$0}")"
-gcloud compute scp "$SCRIPT_DIR/main.tf" "$SCRIPT_DIR/control-startup.sh" \
+scp -F $SSH_CONFIG "$SCRIPT_DIR/main.tf" "$SCRIPT_DIR/control-startup.sh" \
     $USER@$CONTROL_NODE_NAME:~ \
     --zone $ZONE

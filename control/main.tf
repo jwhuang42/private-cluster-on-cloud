@@ -7,13 +7,7 @@ provider "google" {
 # Generate SSH key pair using a local-exec provisioner
 resource "null_resource" "generate_ssh_key" {
   provisioner "local-exec" {
-    command = <<EOF
-      # Remove existing key files if they exist
-      rm -f ~/.ssh/test_cluster_key ~/.ssh/test_cluster_key.pub
-
-      # Generate SSH key for passwordless access
-      ssh-keygen -t ecdsa -b 521 -f ~/.ssh/test_cluster_key -N "" -q
-    EOF
+    command = "bash ./control-ssh-keygen.sh"
   }
 }
 
@@ -108,52 +102,10 @@ resource "google_compute_instance" "control_node" {
 }
 
 # Update SSH Config with Control Node IP
-resource "null_resource" "update_ssh_config" {
+resource "null_resource" "update_ssh_client_config" {
   depends_on = [google_compute_instance.control_node]
 
   provisioner "local-exec" {
-    command = <<EOF
-      CONTROL_NODE_PUBLIC_IP="$(gcloud compute instances describe ${var.control_node_name} --zone=${var.zone} --format='get(networkInterfaces[0].accessConfigs[0].natIP)')"
-      SSH_KEY="$HOME/.ssh/test_cluster_key"
-      SSH_CONFIG="$HOME/.ssh/config"
-
-      # Ensure the .ssh directory and config file exist
-      mkdir -p "$HOME/.ssh"
-      chmod 700 "$HOME/.ssh"
-      touch "$SSH_CONFIG"
-      chmod 600 "$SSH_CONFIG"
-
-      # Backup existing SSH config file
-      if [[ -f "$SSH_CONFIG" ]]; then
-          cp "$SSH_CONFIG" "$SSH_CONFIG.bak"
-      fi
-
-      # Clean up the existing SSH config file
-      > "$SSH_CONFIG"
-
-      # Append the new Host section
-      echo "Host ${var.control_node_name}
-    HostName $CONTROL_NODE_PUBLIC_IP
-    User ${var.user}
-    IdentityFile $SSH_KEY
-    BatchMode yes
-    StrictHostKeyChecking no
-    UserKnownHostsFile /dev/null" >> "$SSH_CONFIG"
-
-      cat "$SSH_CONFIG"
-    EOF
-  }
-}
-
-# Copy Files and Run Startup Script on Control Node
-resource "null_resource" "copy_and_execute_script" {
-  depends_on = [null_resource.update_ssh_config]
-
-  provisioner "local-exec" {
-    command = <<EOF
-      SCRIPT_DIR="$(pwd)"
-      scp -p -F $HOME/.ssh/config "$SCRIPT_DIR/main.tf" "$SCRIPT_DIR/control-startup.sh" ${var.control_node_name}:~
-      ssh -F $HOME/.ssh/config ${var.control_node_name} 'bash ~/control-startup.sh'
-    EOF
+    command = "bash ./update_ssh_config.sh"
   }
 }

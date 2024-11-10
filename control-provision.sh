@@ -74,16 +74,6 @@ gcloud compute instances create "$CONTROL_NODE_NAME" \
     --reservation-affinity=any
 
 CONTROL_NODE_PUBLIC_IP="$(gcloud compute instances describe "$CONTROL_NODE_NAME" --zone="$ZONE" --format="get(networkInterfaces[0].accessConfigs[0].natIP)")"
-
-SCRIPT_DIR="$(dirname "${BASH_SOURCE[0]:-$0}")"
-gcloud compute scp "$SCRIPT_DIR/main.tf" "$SCRIPT_DIR/control-startup.sh" \
-    $USER@$CONTROL_NODE_PUBLIC_IP:~ \
-    --zone $ZONE
-
-echo "******************************************************************"
-echo "Created $CONTROL_NODE_NAME with public IP: $CONTROL_NODE_PUBLIC_IP"
-echo "******************************************************************"
-
 SSH_KEY="$HOME/.ssh/test_cluster_key"
 SSH_CONFIG="$HOME/.ssh/config"
 
@@ -116,3 +106,8 @@ Host $CONTROL_NODE_NAME
     StrictHostKeyChecking no
     UserKnownHostsFile /dev/null
 EOF
+
+SCRIPT_DIR="$(dirname "${BASH_SOURCE[0]:-$0}")"
+gcloud compute scp "$SCRIPT_DIR/main.tf" "$SCRIPT_DIR/control-startup.sh" \
+    $USER@$CONTROL_NODE_PUBLIC_IP:~ \
+    --zone $ZONE

@@ -108,7 +108,7 @@ After opening the `test-cluster-terraform` folder, you should see a `main.tf` fi
 
 Check if the cluster provision is planned as expected:
 ```
-terraform plan -auto-approve -var="project="$(gcloud config get-value project)""
+terraform plan -var="project="$(gcloud config get-value project)""
 ```
 
 Apply the script using terraform after proper changes are applied in the `main.tf`:
@@ -122,7 +122,14 @@ Nodes created via this terraform script generally shouldn't be exposed to the pu
 
 If you no longer plan to test for a while, remember to release the resources to avoid unnecessary charges.
 
-Check and release the resources in the following order:
+On the control node, destory the resources:
+```
+cd $HOME/private-cluster-on-cloud/cluster/ && \
+    terraform destroy -auto-approve -var="project="$(gcloud config get-value project)""
+```
 
-1. Delete GCE VMs (search "VM instances" on the GCP console)  
-2. Delete VPC (search "VPC" on the console and locate the custom one created for test)
+On the cloud shell instance, destroy the resources:
+```
+cd $HOME/private-cluster-on-cloud/control/ && \
+    terraform destroy -auto-approve -var="project_id="$(gcloud config get-value project)"" -var="user=$USER"
+```

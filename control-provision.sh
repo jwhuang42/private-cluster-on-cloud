@@ -44,7 +44,10 @@ else
     echo "Firewall rule $ALLOW_SSH_FIREWALL_RULE_NAME already exists. Skipping creation."
 fi
 
-# Generate SSH key on cloud shell to enable passwordless access.
+# Remove existing key files if they exist
+rm -f ~/.ssh/test_cluster_key ~/.ssh/test_cluster_key.pub
+
+# Generate SSH key on Cloud Shell for passwordless access
 ssh-keygen -t ecdsa -b 521 -f ~/.ssh/test_cluster_key -N "" -q
 
 # Provision the control node.

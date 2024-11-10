@@ -4,7 +4,7 @@
 CONTROL_NODE_NAME="test-control-node"
 ZONE="us-central1-a"
 USER="$USER"
-SSH_KEY="$HOME/.ssh/test_cluster_key"
+SSH_KEY="$HOME/.ssh/control_node_key"
 SSH_CONFIG="$HOME/.ssh/config"
 
 # Step 1: Get the Control Node Public IP

@@ -87,10 +87,13 @@ touch ~/.ssh/config
 ```
 Open the file using any editor you like and add the following section to the config file. Replace the placeholder with proper values. The control node external IP can be identified using GCP console by searching `VM instances`.
 ``` 
-Host test-control-node  
-    HostName <control-node-external-ip>  
+Host test-control-node
+    HostName <control-node-external-ip>
     User <username-on-cloud-shell>
-    IdentityFile ~/.ssh/test_control_node_key   
+    IdentityFile ~/.ssh/test_control_node_key
+    BatchMode yes
+    StrictHostKeyChecking no
+    UserKnownHostsFile /dev/null
 ``` 
 
 You should now be able to ssh into the test control node from the local machine using the following command:

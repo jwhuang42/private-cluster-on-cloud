@@ -108,6 +108,6 @@ resource "null_resource" "update_ssh_client_config" {
   depends_on = [google_compute_instance.control_node]
 
   provisioner "local-exec" {
-    command = "bash ./update_ssh_config.sh"
+    command = "bash ./update-ssh-config.sh"
   }
 }

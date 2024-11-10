@@ -14,6 +14,8 @@ resource "null_resource" "generate_ssh_key" {
 # Load the public key for use in instance metadata
 data "local_file" "ssh_public_key" {
   filename = "${pathexpand("~/.ssh/test_cluster_key.pub")}"
+  # Explicit dependency on the SSH key generation step
+  depends_on = [null_resource.generate_ssh_key]
 }
 
 # VPC Network

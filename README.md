@@ -56,7 +56,9 @@ git clone https://github.com/jwhuang42/private-cluster-on-cloud.git $HOME/privat
 ```
 Add execution permission to the control shell scripts and enters the directory:  
 ```
-chmod +x $HOME/private-cluster-on-cloud/cluster/*.sh && cd $HOME/private-cluster-on-cloud/cluster/
+chmod +x $HOME/private-cluster-on-cloud/cluster/*.sh && \
+      cd $HOME/private-cluster-on-cloud/cluster/ && \
+      ./control-startup.sh
 ```
 
 Init terraform.

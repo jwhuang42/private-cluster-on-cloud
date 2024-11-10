@@ -61,14 +61,6 @@ chmod +x $HOME/private-cluster-on-cloud/cluster/*.sh && \
       ./control-startup.sh
 ```
 
-Init terraform.
-``` 
-terraform init
-```
-Apply the script using terraform:
-```
-terraform apply -auto-approve -var="project_id="$(gcloud config get-value project)""
-```
 
 ### Step 2: Establish SSH connection from the Local Machine
 On your local machine, create a ssh key pair:  
@@ -112,7 +104,12 @@ Set up VSCode remote work using [this guide](https://code.visualstudio.com/docs/
 
 ### Step 4: Adjust the Terraform as needed
 
-After opening the `test-cluster-terraform` folder, you should see a `main.tf` file. Use any language model to help you understand the purpose of this file and how to configure it for batch VM creation. Then, use Terraform to initialize, validate, and apply the configuration.
+After opening the `test-cluster-terraform` folder, you should see a `main.tf` file. Use any language model to help you understand the purpose of this file and how to configure it for batch VM creation. Then, use Terraform to plan, validate, and apply the configuration.
+
+Apply the script using terraform after proper changes are applied in the `main.tf`:
+```
+terraform apply -auto-approve -var="project_id="$(gcloud config get-value project)""
+```
 
 Nodes created via this terraform script generally shouldn't be exposed to the public internet. So you might want to learn about ssh tunneling to help you view web pages on those nodes.
 

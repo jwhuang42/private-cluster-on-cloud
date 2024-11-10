@@ -4,24 +4,21 @@ provider "google" {
   zone    = var.zone
 }
 
-variable "project" {
-  description = "Your GCP project ID"
-  default     = "${GCP_PROJECT_ID}"
+resource "null_resource" "generate_ssh_key" {
+  provisioner "local-exec" {
+    command = "bash ./cluster-ssh-keygen.sh"
+  }
+
+  triggers = {
+    ssh_key_exists = fileexists("${pathexpand("~/.ssh/test_cluster_key.pub")}")
+  }
 }
 
-variable "region" {
-  description = "The GCP region"
-  default     = "us-central1"
-}
-
-variable "zone" {
-  description = "The GCP zone"
-  default     = "us-central1-a"
-}
-
-variable "control_pub_key" {
-  description = "The public key of the control node"
-  default     = "${CONTROL_KEY_PUB}"
+# Load the public key for use in instance metadata
+data "local_file" "ssh_public_key" {
+  filename = "${pathexpand("~/.ssh/test_cluster_key.pub")}"
+  # Explicit dependency on the SSH key generation step
+  depends_on = [null_resource.generate_ssh_key]
 }
 
 data "google_compute_network" "custom_network" {
@@ -71,6 +68,6 @@ resource "google_compute_instance" "vm_instances" {
   }
 
   metadata = {
-    ssh-keys = "root:${var.control_pub_key}"
+    ssh-keys = "root:${data.local_file.ssh_public_key.content}"
   }
 }

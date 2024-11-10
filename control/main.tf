@@ -9,6 +9,10 @@ resource "null_resource" "generate_ssh_key" {
   provisioner "local-exec" {
     command = "bash ./control-ssh-keygen.sh"
   }
+
+  triggers = {
+    ssh_key_exists = fileexists("${pathexpand("~/.ssh/control_node_key.pub")}")
+  }
 }
 
 # Load the public key for use in instance metadata

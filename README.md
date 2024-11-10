@@ -37,9 +37,17 @@ Add execution permission to the shell scripts:
 chmod +x $HOME/private-cluster-on-cloud/*.sh  
 ```
 
-Execute the `control-provision.sh` to provision the control node and set up the test environment. This would bring up a control node with Terraform and Ansible set up.
+Execute the `control-provision.sh` to provision the control node and set up the test environment. This would bring up a control node.
 ``` 
 $HOME/private-cluster-on-cloud/control-provision.sh
+```
+SSH to the newly created control node:
+```
+ssh test-control-node
+```
+Execute the `control-startup.sh` to update `main.tf` with proper default value and install Ansible, terraform:
+```
+chmod +x control-startup.sh && $HOME/control-startup.sh
 ```
 ### Step 2: Establish SSH connection from the Local Machine
 On your local machine, create a ssh key pair:  

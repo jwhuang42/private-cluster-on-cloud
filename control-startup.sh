@@ -1,5 +1,22 @@
 #!/bin/bash
 
+PROJECT_ID=$(gcloud config get-value project)
+
+# Update the Terraform configuration with the current project ID
+SCRIPT_DIR="$(dirname "${BASH_SOURCE[0]:-$0}")"
+sed -i "s/\${GCP_PROJECT_ID}/$PROJECT_ID/g" "$SCRIPT_DIR/main.tf"
+
+# Generate the public key on the remote control node and retrieve it
+REMOTE_CONTROL_PUBKEY=$(ssh-keygen -t ecdsa -b 384 -f ~/.ssh/test_control_node_key -N '' -q && cat ~/.ssh/test_control_node_key.pub)
+echo "Generated test_control_node_key.pub: $REMOTE_CONTROL_PUBKEY"
+
+# Update the Terraform configuration with the new public key
+sed -i "s|\${CONTROL_KEY_PUB}|$REMOTE_CONTROL_PUBKEY|g" "$SCRIPT_DIR/main.tf"
+
+echo "Updated main.tf:"
+cat "$SCRIPT_DIR/main.tf"
+
+
 # Update package lists
 sudo apt-get update -y
 
@@ -58,3 +75,8 @@ echo "Terraform version:"
 echo "****************************************************"
 terraform --version
 
+mkdir -p terraform-script
+mv "$SCRIPT_DIR/main.tf" terraform-script
+
+cd terraform-script
+terraform init

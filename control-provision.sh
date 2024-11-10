@@ -46,10 +46,6 @@ fi
 
 # Generate SSH key on cloud shell to enable passwordless access.
 ssh-keygen -t ecdsa -b 521 -f ~/.ssh/test_cluster_key -N "" -q
-if [ -f ~/.ssh/known_hosts ]; then
-    > ~/.ssh/known_hosts
-    echo "Cleared the contents of ~/.ssh/known_hosts"
-fi
 
 # Provision the control node.
 CONTROL_NODE_NAME=test-control-node
@@ -78,6 +74,11 @@ gcloud compute instances create "$CONTROL_NODE_NAME" \
     --reservation-affinity=any
 
 CONTROL_NODE_PUBLIC_IP="$(gcloud compute instances describe "$CONTROL_NODE_NAME" --zone="$ZONE" --format="get(networkInterfaces[0].accessConfigs[0].natIP)")"
+
+SCRIPT_DIR="$(dirname "${BASH_SOURCE[0]:-$0}")"
+gcloud compute scp "$SCRIPT_DIR/main.tf" "$SCRIPT_DIR/control-startup.sh" \
+    $USER@$CONTROL_NODE_PUBLIC_IP:~ \
+    --zone $ZONE
 
 echo "******************************************************************"
 echo "Created $CONTROL_NODE_NAME with public IP: $CONTROL_NODE_PUBLIC_IP"
@@ -115,36 +116,3 @@ Host $CONTROL_NODE_NAME
     StrictHostKeyChecking no
     UserKnownHostsFile /dev/null
 EOF
-
-# Attempt to SSH using the 'test-control-node' alias
-echo "Attempting SSH connection to '"$CONTROL_NODE_NAME"'..."
-if ssh -vvv $CONTROL_NODE_NAME "true"; then
-    echo "SSH connection successful."
-else
-    echo "Error: SSH connection failed."
-    exit 1
-fi
-
-# Update the Terraform configuration with the current project ID
-SCRIPT_DIR="$(dirname "${BASH_SOURCE[0]:-$0}")"
-sed -i "s/\${GCP_PROJECT_ID}/$PROJECT_ID/g" "$SCRIPT_DIR/main.tf"
-
-# Generate the public key on the remote control node and retrieve it
-REMOTE_CONTROL_PUBKEY=$(ssh $CONTROL_NODE_NAME "ssh-keygen -t ecdsa -b 384 -f ~/.ssh/test_control_node_key -N '' -q && cat ~/.ssh/test_control_node_key.pub")
-echo "Got public key generated on $CONTROL_NODE_NAME: $REMOTE_CONTROL_PUBKEY"
-
-# Update the Terraform configuration with the new public key
-sed -i "s|\${CONTROL_KEY_PUB}|$REMOTE_CONTROL_PUBKEY|g" "$SCRIPT_DIR/main.tf"
-
-echo "Updated main.tf:"
-cat "$SCRIPT_DIR/main.tf"
-
-# Install rsync if not already installed
-sudo apt-get update -y
-sudo apt-get install -y rsync
-
-# Use rsync to transfer files to the control node
-rsync -av -e "ssh $CONTROL_NODE_NAME" --include 'control-startup.sh' --include 'main.tf' --exclude '*' "$SCRIPT_DIR/" "$CONTROL_NODE_NAME:~/test-cluster-terraform/"
-
-# Execute the startup script on the control node
-ssh $CONTROL_NODE_NAME 'bash ~/test-cluster-terraform/control-startup.sh'

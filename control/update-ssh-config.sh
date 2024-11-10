@@ -24,13 +24,8 @@ chmod 700 "$HOME/.ssh"
 touch "$SSH_CONFIG"
 chmod 600 "$SSH_CONFIG"
 
-# Backup the existing SSH config file
-if [[ -f "$SSH_CONFIG" ]]; then
-    cp "$SSH_CONFIG" "$SSH_CONFIG.bak"
-fi
-
-# Clean up existing config for the control node
-sed -i "/^Host $CONTROL_NODE_NAME$/,/^Host /d" "$SSH_CONFIG"
+# Clear the existing SSH config file
+> "$SSH_CONFIG"
 
 # Append the new SSH config for the control node
 cat >> "$SSH_CONFIG" <<EOF

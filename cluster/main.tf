@@ -76,13 +76,6 @@ resource "google_compute_instance" "vm_instances" {
 resource "null_resource" "generate_ssh_config" {
   depends_on = [google_compute_instance.vm_instances]
 
-  # Trigger the resource if the instances list or SSH key changes
-  triggers = {
-    instances_json = jsonencode(local.instances)
-    key_exists = fileexists(pathexpand("~/.ssh/test_cluster_key"))
-    key_checksum = fileexists(pathexpand("~/.ssh/test_cluster_key")) ? filemd5(pathexpand("~/.ssh/test_cluster_key")) : "missing"
-  }
-
   provisioner "local-exec" {
     command = "bash ./update-cluster-ssh-config.sh ~/.ssh/config ~/.ssh/test_cluster_key '${jsonencode(local.instances)}'"
   }

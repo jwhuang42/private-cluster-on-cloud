@@ -5,8 +5,11 @@ CONFIG_FILE=$1
 KEY_FILE=$2
 INSTANCES_JSON=$3
 
+touch "$SSH_CONFIG"
+chmod 600 "$SSH_CONFIG"
+
 # Clear the existing SSH config file
-echo "# SSH Config for Test Cluster" > "$CONFIG_FILE"
+> "$CONFIG_FILE"
 
 # Iterate over the instances JSON and append configuration entries
 echo "$INSTANCES_JSON" | jq -c '.[]' | while read -r instance; do

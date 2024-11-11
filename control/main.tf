@@ -87,6 +87,20 @@ resource "google_compute_firewall" "allow_egress_internet" {
   destination_ranges = ["0.0.0.0/0"]
 }
 
+resource "google_compute_router" "nat_router" {
+  name    = "nat-router"
+  network = google_compute_network.test_cluster_network.self_link
+  region  = var.region
+}
+
+resource "google_compute_router_nat" "nat_config" {
+  name                       = "nat-config"
+  router                     = google_compute_router.nat_router.name
+  region                     = var.region
+  nat_ip_allocate_option     = "AUTO_ONLY"
+  source_subnetwork_ip_ranges_to_nat = "ALL_SUBNETWORKS_ALL_IP_RANGES"
+}
+
 # Control Node Instance
 resource "google_compute_instance" "control_node" {
   name         = var.control_node_name

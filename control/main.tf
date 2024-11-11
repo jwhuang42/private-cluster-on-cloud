@@ -70,6 +70,23 @@ resource "google_compute_firewall" "allow_ssh" {
   target_tags   = ["allow-ssh"]
 }
 
+# Firewall rule: Allow egress traffic (internet access)
+resource "google_compute_firewall" "allow_egress_internet" {
+  name    = "${var.vpc_network_name}-allow-egress-internet"
+  network = google_compute_network.test_cluster_network.self_link
+
+  description = "Allows outbound internet access from any instance on the network."
+  direction   = "EGRESS"
+  priority    = 65534
+
+  allow {
+    protocol = "all"
+  }
+
+  # Destination ranges for internet access (0.0.0.0/0 allows all destinations)
+  destination_ranges = ["0.0.0.0/0"]
+}
+
 # Control Node Instance
 resource "google_compute_instance" "control_node" {
   name         = var.control_node_name

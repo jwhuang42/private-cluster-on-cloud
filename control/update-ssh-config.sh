@@ -30,6 +30,13 @@ chmod 600 "$SSH_CONFIG"
 # Append the new SSH config for the control node
 cat >> "$SSH_CONFIG" <<EOF
 
+Host $CONTROL_NODE_PUBLIC_IP
+    User $USER
+    IdentityFile $SSH_KEY
+    BatchMode yes
+    StrictHostKeyChecking no
+    UserKnownHostsFile /dev/null
+
 Host $CONTROL_NODE_NAME
     HostName $CONTROL_NODE_PUBLIC_IP
     User $USER

@@ -17,6 +17,13 @@ echo "$INSTANCES_JSON" | jq -c '.[]' | while read -r instance; do
   INTERNAL_IP=$(echo "$instance" | jq -r '.internal_ip')
 
   cat <<CONFIG_ENTRY >> "$CONFIG_FILE"
+Host $INTERNAL_IP
+  User root
+  IdentityFile $KEY_FILE
+  StrictHostKeyChecking no
+  UserKnownHostsFile /dev/null
+  BatchMode yes
+
 Host $NAME
   HostName $INTERNAL_IP
   User root
